@@ -4,8 +4,14 @@
   "description": "Hammer that!",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jasmine --reporter=jamocha/spec --config=test/.jasmine.json"
   },
   "author": "Ivan Baktsheev <dot.and.thing@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esm": "^3.2.25",
+    "express": "^4.17.1",
+    "jasmine": "^3.4.0"
+  },
+  "dependencies": {}
 }

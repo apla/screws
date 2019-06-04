@@ -1,0 +1,13 @@
+{
+	"spec_dir": "test",
+	"spec_files": [
+		"*.js"
+	],
+	"reporter": "jasmine-spec-reporter",
+	"requires": ["esm"],
+	"timeSpecDuration": true,
+	"helpers": [
+		"../node_modules/jamocha/helpers.js"
+	],
+	"random": false
+}
