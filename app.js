@@ -43,6 +43,8 @@ export default class App extends EventEmitter {
 			console.error (`Module ${className} should have prefix`);
 		}
 		this.subscribers[prefix] = subscriber;
+
+		return subscriber;
 	}
 
 	/**
@@ -96,7 +98,7 @@ export default class App extends EventEmitter {
 	}
 
 	sendMessage (subPrefix, method, ...args) {
-		console.log (subPrefix, method, args);
+		// console.log (subPrefix, method, args);
 		const subscriber = this.subscribers[subPrefix];
 		subscriber[method].apply (subscriber, args);
 	}
