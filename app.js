@@ -18,12 +18,12 @@ export default class App extends EventEmitter {
 	}
 
 	/**
-	 * Register module with app
-	 * @property {Object|string} moduleLike string with 
-	 * @property {string=} prefix Event
+	 * Connect module with app
+	 * @property {Object|string} subscriber string with 
+	 * @property {string=} prefix override prefix for subscriber
 	 * @memberof App
 	 */
-	register (subscriber, prefix) {
+	connect (subscriber, prefix) {
 		
 		let className;
 		if (!prefix) {
@@ -42,6 +42,7 @@ export default class App extends EventEmitter {
 		if (!prefix) {
 			console.error (`Module ${className} should have prefix`);
 		}
+
 		this.subscribers[prefix] = subscriber;
 
 		return subscriber;

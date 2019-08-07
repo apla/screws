@@ -22,7 +22,7 @@ function onwarn (warning, warn) {
 
 const CACHE = {};
 
-export function build (inputOptions, outputOptions) {
+export function building (inputOptions, outputOptions) {
 
 	if (!outputOptions)
 		outputOptions = inputOptions.output;
@@ -83,12 +83,12 @@ export default class Rollup {
 		return "rollup";
 	}
 
-	buildAll () {
+	buildingAll () {
 		// console.log (arguments, rollupConfig);
-		Promise.all (this.configs.map (config => {
+		return Promise.all (this.configs.map (config => {
 	
 			const rollStartTime = performance.now();
-			return build (config).then (result => {
+			return building (config).then (result => {
 	
 				const rollEndTime = performance.now();
 				// bundle generated
@@ -127,8 +127,8 @@ export default class Rollup {
 		}));
 	}
 
-	configure () {
-		Promise.all (this.configFiles.map (configPath => {
+	configuring () {
+		return Promise.all (this.configFiles.map (configPath => {
 			return import (configPath);
 		})).then (modules => {
 			// console.log (module._cache);
@@ -136,10 +136,14 @@ export default class Rollup {
 			// console.log (Object.keys (require.cache));
 			// https://github.com/standard-things/esm/issues/287
 			this.configs = [].concat.apply([], modules.map (mod => mod.default));
-			this.buildAll();
+			this.buildingAll();
 		}).catch (err => {
 			console.error (err);
 		});
+	}
+
+	starting () {
+		return this.configuring ();
 	}
 	
 }

@@ -11,7 +11,6 @@ import EventSender from './http-sse.js';
 //  proxy section  //
 /////////////////////
 
-
 const proxy = new Proxy (locationHeader => {
 	if (locationHeader[0] === '/') {
 		// same host redirect
@@ -40,8 +39,30 @@ function proxyHandler (req, res) {
 // server section  //
 /////////////////////
 
-export default class ExpressServer {
-	constructor (options) {
+/**
+ * @typedef HTTPServerOptions
+ * @type {Object}
+ * @property {string=}  httpRoot HTTP server root for static files
+ * @property {Object<string,string[]>=} mimeMaps additional mime maps (content-type: [list of extensions])
+ * @property {boolean=} proxy use forward proxy on scheme://server/http(d)/proxied.site
+ * @property {string|boolean=}  eventsUrl use SSE, /events by default
+ */
+
+/** 
+ * @typedef {import('./subscriber.js')} Subscriber
+ */
+"";
+
+/**
+ * @classdesc HTTP server based on express
+ * @implements Subscriber
+ */
+export default class HTTPServerExpress {
+	/**
+	 * Express server constructor
+	 * @param {HTTPServerOptions=} options 
+	 */
+	constructor (options = {}) {
 		this.server = express ();
 		
 		if (options.httpRoot) {
@@ -53,7 +74,7 @@ export default class ExpressServer {
 		}
 
 		if (options.eventsUrl) {
-			this.enableSSE (options.eventsUrl);
+			this.enableSSE (options.eventsUrl === true ? undefined : options.eventsUrl);
 		}
 		
 	}
@@ -66,20 +87,30 @@ export default class ExpressServer {
 		this.server.use(/\/(https?)\/(.*)/, proxyHandler);
 	}
 
-	enableStatic (httpRoot, mimeMaps = []) {
+	/**
+	 * Enable static files server
+ 	 * @param {string}  httpRoot HTTP server root for static files
+ 	 * @param {Object<string,string[]>=} mimeMaps additional mime maps (content-type: [list of extensions])
+	 */
+	enableStatic (httpRoot, mimeMaps = {}) {
 		this.httpRoot = httpRoot;
 
-		mimeMaps.forEach (mapping => {
+		// Can I call define with whole object?
+		Object.keys (mimeMaps).forEach (contentType => {
 			// {'video/mp2t': ['m2ts']}
-			express.static.mime.define (mapping);
+			express.static.mime.define ({
+				[contentType]: mimeMaps[contentType]
+			});
 		});
 		
 		this.server.use (express.static (this.httpRoot));
 	}
 
-	listening (port = 0) {
+	starting (port = 0) {
 		return new Promise ((resolve, reject) => {
-			this.server.listen (port, function () {
+			this.server.listen (parseInt (port) >= -1 ? port : this.port || 0 , function (err) {
+				if (err)
+					reject (err);
 				resolve (this.address().port);
 			});
 		})
@@ -97,10 +128,16 @@ export default class ExpressServer {
 		this.sendAlert       = eventSender.alert;
 	}
 
+	/**
+	 * @abstract
+	 */
 	sendPageRefresh () {
 		console.warn ("This is the stub method. To enable page refresh, use `httpd.enableSSE()` or define `eventsUrl` in httpd constructor options");
 	}
 
+	/**
+	 * @abstract
+	 */
 	sendAlert () {
 		console.warn ("This is the stub method. To enable page alert, use `httpd.enableSSE()` or define `eventsUrl` in httpd constructor options");
 	}
