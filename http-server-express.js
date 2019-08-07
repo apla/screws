@@ -42,10 +42,10 @@ function proxyHandler (req, res) {
 /**
  * @typedef HTTPServerOptions
  * @type {Object}
- * @property {string=}  httpRoot HTTP server root for static files
- * @property {Object<string,string[]>=} mimeMaps additional mime maps (content-type: [list of extensions])
- * @property {boolean=} proxy use forward proxy on scheme://server/http(d)/proxied.site
- * @property {string|boolean=}  eventsUrl use SSE, /events by default
+ * @property {string=}                  root      HTTP server root for static files
+ * @property {Object<string,string[]>=} mimeMaps  additional mime maps (content-type: [list of extensions])
+ * @property {boolean=}                 proxy     use forward proxy on scheme: //server/http(d)/proxied.site
+ * @property {string|boolean=}          eventsUrl use SSE, /events by default
  */
 
 /** 
@@ -65,8 +65,8 @@ export default class HTTPServerExpress {
 	constructor (options = {}) {
 		this.server = express ();
 		
-		if (options.httpRoot) {
-			this.enableStatic (options.httpRoot, options.mimeMaps);
+		if (options.root) {
+			this.enableStatic (options.root, options.mimeMaps);
 		}
 		
 		if (options.proxy) {
@@ -89,11 +89,11 @@ export default class HTTPServerExpress {
 
 	/**
 	 * Enable static files server
- 	 * @param {string}  httpRoot HTTP server root for static files
+ 	 * @param {string}  root HTTP server root for static files
  	 * @param {Object<string,string[]>=} mimeMaps additional mime maps (content-type: [list of extensions])
 	 */
-	enableStatic (httpRoot, mimeMaps = {}) {
-		this.httpRoot = httpRoot;
+	enableStatic (root, mimeMaps = {}) {
+		this.root = root;
 
 		// Can I call define with whole object?
 		Object.keys (mimeMaps).forEach (contentType => {
@@ -103,7 +103,7 @@ export default class HTTPServerExpress {
 			});
 		});
 		
-		this.server.use (express.static (this.httpRoot));
+		this.server.use (express.static (this.root));
 	}
 
 	starting (port = 0) {
@@ -120,12 +120,13 @@ export default class HTTPServerExpress {
 
 		const eventSender = new EventSender ({
 			url:      eventsUrl,
-			httpRoot: this.httpRoot
+			root: this.root
 		}, this.server);
 
 		this.eventSender     = eventSender;
 		this.sendPageRefresh = eventSender.reload;
 		this.sendAlert       = eventSender.alert;
+		this.sendEvent       = eventSender.event;
 	}
 
 	/**
@@ -141,6 +142,14 @@ export default class HTTPServerExpress {
 	sendAlert () {
 		console.warn ("This is the stub method. To enable page alert, use `httpd.enableSSE()` or define `eventsUrl` in httpd constructor options");
 	}
+
+	/**
+	 * @abstract
+	 */
+	sendEvent () {
+		console.warn ("This is the stub method. To enable page event, use `httpd.enableSSE()` or define `eventsUrl` in httpd constructor options");
+	}
+
 }
 
 // console.log (httpApp._router.stack);

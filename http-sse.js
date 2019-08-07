@@ -289,7 +289,7 @@ function unwrapFnContents (fn) {
 }
 
 export default class EventSender {
-	constructor ({url, httpRoot}, httpApp) {
+	constructor ({url, root}, httpApp) {
 
 		const pusher = this.pusher = SSEPusher();
 	
@@ -332,7 +332,7 @@ registerWorker ();
 	
 }
 
-export function eventSender ({url, httpRoot}, httpApp) {
+export function eventSender ({url, root}, httpApp) {
 
 	const pusher = SSEPusher();
 
