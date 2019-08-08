@@ -327,6 +327,16 @@ registerWorker ();
 			// pusher ('reload', + Date.now());
 			pusher ('alert', message);
 		}
+
+		this.event = function event (eventName, message) {
+			if (message === undefined) {
+				message = eventName;
+				pusher (message);
+			} else {
+				pusher (eventName, message);
+			}
+			
+		}
 	}
 
 	
@@ -369,6 +379,11 @@ registerWorker ();
 			// TODO: use httpRoot somehow
 			// pusher ('reload', + Date.now());
 			pusher ('alert', message);
+		},
+		event: function event (eventName, message) {
+			// TODO: use httpRoot somehow
+			// pusher ('reload', + Date.now());
+			pusher (eventName, message);
 		},
 	}
 
