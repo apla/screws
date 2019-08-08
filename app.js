@@ -87,16 +87,16 @@ export default class App extends EventEmitter {
 		}
 		return handlers.map (handler => {
 			let fn, subscriber;
+			
+			if (Array.isArray (handler)) {
+				[fn, subscriber] = handler;
+			} else {
+				fn = handler;
+			}
 			if (!fn) {
 				console.trace (`Unexpected function passed to wrap as event`);
 			}
-			if (Array.isArray (handler)) {
-				[fn, subscriber] = handler;
-				return this._event (fn, subscriber);
-			} else {
-				fn = handler;
-				return this._event (fn);
-			}
+			return this._event (fn, subscriber);
 		});
 
 	}
