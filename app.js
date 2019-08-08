@@ -49,14 +49,19 @@ export default class App extends EventEmitter {
 	}
 
 	/**
-	 * Wraps received function reference
+	 * Wraps received function reference as event
 	 *
 	 * @param {Function} fn method reference
 	 * @param {Object=} subscriber class instance reference
 	 * @memberof App
 	 */
-	wrap (fn, subscriber) {
-		// console.log (fn);
+	event (fn, subscriber) {
+		// console.trace (fn);
+
+		if (!fn) {
+			console.trace (`No function passed to wrap as event`);
+			return;
+		}
 
 		let subPrefixFound;
 		let methodFound;
@@ -94,12 +99,12 @@ export default class App extends EventEmitter {
 			return;
 		}
 	
-		return this.sendMessage.bind (this, subPrefixFound, methodFound);
+		return this.emitEvent.bind (this, subPrefixFound, methodFound);
 
 	}
 
-	sendMessage (subPrefix, method, ...args) {
-		// console.log (subPrefix, method, args);
+	emitEvent (subPrefix, method, ...args) {
+		// console.log ('EMITTING', subPrefix, method, args);
 		const subscriber = this.subscribers[subPrefix];
 		subscriber[method].apply (subscriber, args);
 	}

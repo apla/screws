@@ -22,10 +22,10 @@ describe ("app interface", () => {
 
 		const app = new App ();
 
-		const test = app.register (EvtHandler);
+		const test = app.connect (EvtHandler);
 
 		fsWatch ('test', {
-			[/.*/]: app.wrap (test.pass)
+			[/.*/]: app.events (test.pass)
 		});
 
 		var now = new Date();
