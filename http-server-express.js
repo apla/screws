@@ -51,7 +51,11 @@ function proxyHandler (req, res) {
 /** 
  * @typedef {import('./subscriber.js')} Subscriber
  */
-"";
+/** 
+ * @typedef {import('http').Server} HTTPServer
+ */
+
+ "";
 
 /**
  * @classdesc HTTP server based on express
@@ -63,8 +67,10 @@ export default class HTTPServerExpress {
 	 * @param {HTTPServerOptions=} options 
 	 */
 	constructor (options = {}) {
-		this.server = express ();
-		
+		this.express = express ();
+		/** @type HTTPServer */
+		this.server  = undefined;
+
 		if (options.root) {
 			this.enableStatic (options.root, options.mimeMaps);
 		}
@@ -84,7 +90,7 @@ export default class HTTPServerExpress {
 	}
 
 	enableProxy () {
-		this.server.use(/\/(https?)\/(.*)/, proxyHandler);
+		this.express.use(/\/(https?)\/(.*)/, proxyHandler);
 	}
 
 	/**
@@ -103,16 +109,33 @@ export default class HTTPServerExpress {
 			});
 		});
 		
-		this.server.use (express.static (this.root));
+		this.express.use (express.static (this.root));
 	}
 
 	starting (port = 0) {
 		return new Promise ((resolve, reject) => {
-			this.server.listen (parseInt (port) >= -1 ? port : this.port || 0 , function (err) {
+			const self = this;
+			this.express.listen (parseInt (port) >= -1 ? port : this.port || 0 , function (err) {
 				if (err)
-					reject (err);
+					return reject (err);
+				self.server = this;
 				resolve (this.address().port);
 			});
+		})
+	}
+
+	stopping () {
+		return new Promise ((resolve, reject) => {
+			if (this.server) {
+				this.server.close(err => {
+					if (err) {
+						return reject (err);
+					}
+					resolve ();
+				});
+			} else {
+				resolve ();
+			}
 		})
 	}
 
@@ -121,7 +144,7 @@ export default class HTTPServerExpress {
 		const eventSender = new EventSender ({
 			url:      eventsUrl,
 			root: this.root
-		}, this.server);
+		}, this.express);
 
 		this.eventSender     = eventSender;
 		this.sendPageRefresh = eventSender.reload;
