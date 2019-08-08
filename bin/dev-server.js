@@ -53,10 +53,10 @@ import fsWatch from '../fs-watch.js';
 // import fsWatch from 'screws/fs-watch.js';
 
 fsWatch ('htdocs', {
-	[/^[^\/]+\/loader/]: app.event (rollup.buildingAll),
-	[/^[^\/]+\/app/]: app.event (rollup.buildingAll),
-	[/\.rollup\.browser\.js/]: app.event (rollup.configuring),
-	[/.*./]: app.event (httpd.sendPageRefresh)
+	[/^[^\/]+\/loader/]: app.events (rollup.buildingAll),
+	[/^[^\/]+\/app/]: app.events (rollup.buildingAll),
+	[/\.rollup\.browser\.js/]: app.events (rollup.configuring),
+	[/.*./]: app.events (httpd.sendPageRefresh)
 });
 
 //////////////////////
@@ -64,7 +64,7 @@ fsWatch ('htdocs', {
 //////////////////////
 
 app.signalled ({
-	'SIGINT': app.event (httpd.stopping)
+	'SIGINT': app.eventQueue (httpd.stopping, app.stop)
 })
 
 ////////////////////////
