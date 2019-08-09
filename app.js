@@ -159,7 +159,7 @@ export default class App extends EventEmitter {
 	emitEvent (subPrefix, method, ...args) {
 		// console.log ('EMITTING', subPrefix, method, args);
 		const subscriber = this.subscribers[subPrefix];
-		subscriber[method].apply (subscriber, args);
+		return subscriber[method].apply (subscriber, args);
 	}
 
 	/**
