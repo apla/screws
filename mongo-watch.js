@@ -48,7 +48,7 @@ export function checkingFeatureStatus (client) {
  * Watch for changes in mongodb deployment/database/collection
  * @param {MongoClient|MongoDb|MongoCollection} connection database connection, you can use collection from >3.6 and from 4.0 server and database objects
  * @param {Object[]=} pipeline Aggregation framework pipeline
- * @param {*} cb
+ * @param {Function} cb callback with changes data
  */
 export default function mongoWatch (connection, pipeline, cb) {
 	const changeStream = connection.watch(pipeline);
@@ -57,4 +57,6 @@ export default function mongoWatch (connection, pipeline, cb) {
     changeStream.on ("change", function (change) {
     	cb (change);
 	});
+
+	// TODO: return function to close connection
 }
