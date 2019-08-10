@@ -1,6 +1,4 @@
-import fs, { write } from 'fs';
 import assert from 'assert';
-import path from 'path';
 
 import mongoWatch from '../mongo-watch.js';
 
@@ -10,7 +8,7 @@ const url            = 'mongodb://localhost:27017';
 const dbName         = 'watchTest';
 const collectionName = 'watchCollection';
 
-let writer, watcher;
+let writer;
 
 function establishingConnection ({url, dbName, collectionName}) {
 	return new Promise ((resolve, reject) => {
@@ -42,27 +40,19 @@ function establishingConnection ({url, dbName, collectionName}) {
 }
 
 beforeAll (() => {
-	return Promise.all ([
-		establishingConnection ({url, dbName, collectionName}),
-		establishingConnection ({url, dbName, collectionName})
-	]).then ((connections) => {
-
-		const [_writer, _watcher] = connections;
-
-		writer  = _writer;
-		watcher = _watcher;
-	})
+	return establishingConnection ({url, dbName, collectionName}).then (
+		_writer => writer = _writer
+	);
 });
 
 afterAll (() => {
 	writer.client.close ();
-	watcher.client.close ();
 })
 
 
 describe ("mongo watcher", () => {
 
-	it ("any change", (done) => {
+	it ("any change", async (done) => {
 
 		// const pipeline = {fullDocument: 'updateLookup'};
 		/*
@@ -71,11 +61,17 @@ describe ("mongo watcher", () => {
 			{ $addFields: { newField: 'this is an added field!' } }
 		];
 		*/
+
+		const watcher = await establishingConnection ({url, dbName, collectionName});
+
 		const pipeline = [];
 		
 		mongoWatch (watcher.collection, pipeline, (change) => {
 			assert.equal (change.operationType, 'insert');
 			assert.equal (change.fullDocument.doc, "doc contents");
+
+			watcher.client.close ();
+
 			done ();
 		});
 
@@ -84,5 +80,31 @@ describe ("mongo watcher", () => {
 		});
 
 	});
+
+	
+	it ("only delete change", async (done) => {
+
+		const watcher = await establishingConnection ({url, dbName, collectionName});
+
+		const pipeline = [{
+			$match: {operationType: 'delete'}
+		}];
+		
+		mongoWatch (watcher.collection, pipeline, (change) => {
+			assert.equal (change.operationType, 'delete');
+
+			watcher.client.close ();
+
+			done ();
+		});
+
+		writer.collection.insertOne ({
+			doc: "doc contents"
+		}, (err, res) => {
+			writer.collection.deleteOne ({_id: res.insertedId});
+		});
+
+	});
+
 
 });

@@ -10,12 +10,6 @@ https://docs.mongodb.com/manual/aggregation/
 
 // https://docs.mongodb.com/manual/changeStreams/
 
-const pipeline = [
-  {
-    $project: { documentKey: false }
-  }
-];
-
 /*
   watch for collection available from 3.6, for entire node and database - from 4.0
   unfortunately, to check feature status requitres connection to admin database,
@@ -51,33 +45,16 @@ export function checkingFeatureStatus (client) {
 /** @typedef {import('mongodb').Collection} MongoCollection */
 
 /**
- * 
+ * Watch for changes in mongodb deployment/database/collection
  * @param {MongoClient|MongoDb|MongoCollection} connection database connection, you can use collection from >3.6 and from 4.0 server and database objects
  * @param {Object[]=} pipeline Aggregation framework pipeline
- * @param {*} callbacks
+ * @param {*} cb
  */
 export default function mongoWatch (connection, pipeline, cb) {
 	const changeStream = connection.watch(pipeline);
-    // start listen to changes
+	// start listen to changes
+	// change fields: https://docs.mongodb.com/manual/reference/change-events/#change-stream-output
     changeStream.on ("change", function (change) {
     	cb (change);
 	});
 }
-
-/*
-const MONGO_CONN_STR = "mongodb://localhost:27017,localhost:27018,localhost:27019?replicaSet=mongo-repl";
-
-MongoClient.connect(MONGO_CONN_STR).then(client => {
-    console.log("Connected to the server");
-    // specify db and collections
-    const db = client.db("superheroesdb");
-    const collection = db.collection("superheroes");
-
-    const changeStream = collection.watch(pipeline);
-    // start listen to changes
-    changeStream.on("change", function(change) {
-    	console.log(change);
-	});
-});
-
-*/
