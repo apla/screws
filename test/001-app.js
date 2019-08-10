@@ -50,7 +50,7 @@ describe ("app interface", () => {
 
 		const test = new EvtHandler ();
 
-		app.connect (test);
+		app.core (test);
 
 		immediate (app.events (test.pass));
 
@@ -63,7 +63,7 @@ describe ("app interface", () => {
 
 		const evtHandler = new EvtHandler ();
 
-		const test = app.connect (evtHandler);
+		const test = app.core (evtHandler);
 
 		immediate (app.events (test.pass));
 
@@ -77,7 +77,7 @@ describe ("app interface", () => {
 
 		const evtHandler = new EvtHandler ();
 
-		const test = app.connect (evtHandler);
+		const test = app.core (evtHandler);
 
 		fsWatch ('test', {
 			[/.*/]: app.events (test.pass)
@@ -95,12 +95,12 @@ describe ("app interface", () => {
 
 		const test = new EvtHandler ();
 
-		app.connect (test);
+		app.core (test);
 
 		immediate (app.events (test.nothing, test.postpone, test.postpone, test.pass));
 
 		test.on ('done', (data) => {
-			// nothing => , postpone#1 => '-', postpone#2 => '-', pass
+			// nothing | postpone#1 => '-' | postpone#2 => '-' | pass
 			assert.equal (data.join (''), '--');
 			done ();
 		});
@@ -113,12 +113,12 @@ describe ("app interface", () => {
 
 		const test = new EvtHandler ();
 
-		app.connect (test);
+		app.core (test);
 
 		immediate (app.eventQueue (test.nothing, test.postpone, test.postpone, test.pass));
 
 		test.on ('done', (data) => {
-			// nothing => ,
+			// nothing => 
 			// postpone#1 => '-', postpone#1 setImmediate => '+'
 			// postpone#2 => '-', postpone#2 setImmediate => '+'
 			// pass

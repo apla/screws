@@ -46,6 +46,7 @@ function proxyHandler (req, res) {
  * @property {Object<string,string[]>=} mimeMaps  additional mime maps (content-type: [list of extensions])
  * @property {boolean=}                 proxy     use forward proxy on scheme: //server/http(d)/proxied.site
  * @property {string|boolean=}          eventsUrl use SSE, /events by default
+ * @property {number=}                  port      port to listen
  */
 
 /** 
@@ -75,6 +76,10 @@ export default class HTTPServerExpress {
 			this.enableStatic (options.root, options.mimeMaps);
 		}
 		
+		if (options.port) {
+			this.port = options.port;
+		}
+
 		if (options.proxy) {
 			this.enableProxy ();
 		}

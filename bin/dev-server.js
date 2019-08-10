@@ -8,6 +8,7 @@ import App from '../app.js';
 const app = new App ();
 
 const httpRoot = process.env.PWD + '/htdocs';
+const httpPort = 50102;
 
 ////////////////////
 // httpd section  //
@@ -16,13 +17,12 @@ const httpRoot = process.env.PWD + '/htdocs';
 import ExpressServer from '../http-server-express.js';
 // import ExpressServer from 'screws/http-server-express.js';
 
-const httpd = new ExpressServer ({
+const httpd = app.core (new ExpressServer ({
 	root: httpRoot,
 	proxy: true,
+	port: httpPort,
 	eventsUrl: '/events'
-});
-
-app.connect (httpd);
+}));
 
 /////////////////////
 // rollup section  //
@@ -33,17 +33,21 @@ app.connect (httpd);
 import Rollup from '../rollup.js';
 // import Rollup from 'screws/rollup.js';
 
-const rollup = new Rollup ({
+const rollup = app.core (new Rollup ({
 	httpRoot: httpRoot,
 	configFiles: [
 		'./rollup.browser.js',
 		path.join (process.env.INIT_CWD, '.rollup.browser.js')
 	]
-});
+}));
 
-// rollup.configuring ();
+////////////////////
+// signal section //
+////////////////////
 
-app.connect (rollup);
+app.signalled ({
+	'SIGINT': app.eventQueue (httpd.stopping, app.stop)
+})
 
 //////////////////////
 // watcher section  //
@@ -52,43 +56,37 @@ app.connect (rollup);
 import fsWatch from '../fs-watch.js';
 // import fsWatch from 'screws/fs-watch.js';
 
-fsWatch ('htdocs', {
-	[/^[^\/]+\/loader/]: app.events (rollup.buildingAll),
-	[/^[^\/]+\/app/]: app.events (rollup.buildingAll),
-	[/\.rollup\.browser\.js/]: app.events (rollup.configuring),
-	[/.*./]: app.events (httpd.sendPageRefresh)
-});
-
-//////////////////////
-// signal section  //
-//////////////////////
-
-app.signalled ({
-	'SIGINT': app.eventQueue (httpd.stopping, app.stop)
-})
-
 ////////////////////////
 // discovery section  //
 ////////////////////////
 
 import Bonjour from 'bonjour-hap';
 
-Promise.all ([
-	httpd.starting (50102),
-	rollup.starting()
-]).then (([httpdPort, ]) => {
-	console.log ('Server listening on port ' + httpdPort);
-	// advertise an HTTP server on port 3000
-	const 
-		projectName =  path.basename (process.env.PWD),
-		username    = process.env.USER;
-	Bonjour().publish({
-		name: [projectName, username].join ('@') + '-server',
-		type: 'http',
-		port: httpdPort
+app.init (() => {
+	fsWatch ('htdocs', {
+		[/^[^\/]+\/loader/]: app.events (rollup.buildingAll),
+		[/^[^\/]+\/app/]: app.events (rollup.buildingAll),
+		[/\.rollup\.browser\.js/]: app.events (rollup.configuring),
+		[/.*./]: app.events (httpd.sendPageRefresh)
 	});
-
+	
+	Promise.all ([
+		httpd.starting (),
+		rollup.starting()
+	]).then (([httpdPort, ]) => {
+		console.log ('Server listening on port ' + httpdPort);
+		// advertise an HTTP server on port 3000
+		const 
+			projectName =  path.basename (process.env.PWD),
+			username    = process.env.USER;
+		Bonjour().publish({
+			name: [projectName, username].join ('@') + '-server',
+			type: 'http',
+			port: httpdPort
+		});
+	});
 })
+
 
 
 /*

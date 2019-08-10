@@ -14,16 +14,15 @@ export default class App extends EventEmitter {
 		/** @type Object @description subscriber instances */
 		this.subscribers = {};
 
-		this.init ();
 	}
 
 	/**
-	 * Connect module with app
+	 * Connect module to the app's core process
 	 * @property {Object|string} subscriber string with 
 	 * @property {string=} prefix override prefix for subscriber
 	 * @memberof App
 	 */
-	connect (subscriber, prefix) {
+	core (subscriber, prefix) {
 		
 		let className;
 		if (!prefix) {
@@ -49,7 +48,7 @@ export default class App extends EventEmitter {
 	}
 
 	/**
-	 * Generate parrallel event launcher from functions
+	 * Generate parrallel event emitter from functions
 	 *
 	 * @param {Array<Function|Array<Function,Object>>} handlers method reference
 	 * @memberof App
@@ -63,9 +62,9 @@ export default class App extends EventEmitter {
 	}
 
 	/**
-	 * Generate event queue from functions
+	 * Generate sequential event emitter from functions
 	 *
-	 * @param {Array<Function|Array<Function,Object>>} handlers method reference
+	 * @param {...Function|Array<Function,Object>} handlers method reference
 	 * @memberof App
 	 */
 	eventQueue (...handlers) {
@@ -86,7 +85,9 @@ export default class App extends EventEmitter {
 			console.trace (`No function passed to wrap as event`);
 		}
 		return handlers.map (handler => {
-			let fn, subscriber;
+			let
+				fn,
+				subscriber;
 			
 			if (Array.isArray (handler)) {
 				[fn, subscriber] = handler;
@@ -163,7 +164,7 @@ export default class App extends EventEmitter {
 	}
 
 	/**
-	 * Handles main process signals
+	 * Handles core process signals
 	 *
 	 * @param {Object<String,Function>} signalHandlers signal handlers
 	 * @memberof App
@@ -180,11 +181,19 @@ export default class App extends EventEmitter {
 		
 	}
 
+	/**
+	 * Stops core process
+	 */
 	stop () {
 		process.exit();
 	}
 
-	init () {
+	/**
+	 * App init procedure. Will be called only in core process
+	 * @param {Function} codeRef initialization function
+	 */
+	init (codeRef) {
+		codeRef ();
 	}
 }
 
