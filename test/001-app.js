@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 
 import App from '../app.js';
 
-import fsWatch from '../fs-watch.js';
+import fsWatch from '../listen/fs.js';
 
 class EvtHandler extends EventEmitter {
 	static get prefix () {return "test"}

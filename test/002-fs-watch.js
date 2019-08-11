@@ -2,7 +2,7 @@ import fs from 'fs';
 import assert from 'assert';
 import path from 'path';
 
-import fsWatch from '../fs-watch.js';
+import fsWatch from '../listen/fs.js';
 
 describe ("fs watcher", () => {
 

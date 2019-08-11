@@ -53,8 +53,8 @@ app.signalled ({
 // watcher section  //
 //////////////////////
 
-import fsWatch from '../fs-watch.js';
-// import fsWatch from 'screws/fs-watch.js';
+import fsWatch from '../listen/fs.js';
+// import fsWatch from 'screws/listen/fs.js';
 
 ////////////////////////
 // discovery section  //

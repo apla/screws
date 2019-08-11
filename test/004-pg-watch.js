@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-import pgWatch from '../pg-watch.js';
+import pgWatch from '../listen/pg.js';
 
 import {Client} from 'pg';
 

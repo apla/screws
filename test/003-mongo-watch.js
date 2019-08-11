@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-import mongoWatch from '../mongo-watch.js';
+import mongoWatch from '../listen/mongo.js';
 
 import {MongoClient} from 'mongodb';
 
