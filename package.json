@@ -11,7 +11,12 @@
   "devDependencies": {
     "esm": "^3.2.25",
     "express": "^4.17.1",
-    "jasmine": "^3.4.0"
+    "jasmine": "^3.4.0",
+    "mongodb": "^3.3.0-beta2",
+    "pg": "^7.12.0",
+    "redis": "^2.8.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "error-stack-parser": "^2.0.3"
+  }
 }

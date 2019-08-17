@@ -52,7 +52,7 @@ describe ("app interface", () => {
 
 		app.core (test);
 
-		immediate (app.events (test.pass));
+		immediate (app.parallel (test.pass));
 
 		test.on ('done', done);
 	});
@@ -65,7 +65,7 @@ describe ("app interface", () => {
 
 		const test = app.core (evtHandler);
 
-		immediate (app.events (test.pass));
+		immediate (app.parallel (test.pass));
 
 		test.on ('done', done);
 	});
@@ -80,7 +80,7 @@ describe ("app interface", () => {
 		const test = app.core (evtHandler);
 
 		fsWatch ('test', {
-			[/.*/]: app.events (test.pass)
+			[/.*/]: app.parallel (test.pass)
 		});
 
 		var now = new Date();
@@ -97,7 +97,7 @@ describe ("app interface", () => {
 
 		app.core (test);
 
-		immediate (app.events (test.nothing, test.postpone, test.postpone, test.pass));
+		immediate (app.parallel (test.nothing, test.postpone, test.postpone, test.pass));
 
 		test.on ('done', (data) => {
 			// nothing | postpone#1 => '-' | postpone#2 => '-' | pass
@@ -115,7 +115,7 @@ describe ("app interface", () => {
 
 		app.core (test);
 
-		immediate (app.eventQueue (test.nothing, test.postpone, test.postpone, test.pass));
+		immediate (app.series (test.nothing, test.postpone, test.postpone, test.pass));
 
 		test.on ('done', (data) => {
 			// nothing => 

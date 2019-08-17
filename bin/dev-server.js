@@ -46,7 +46,7 @@ const rollup = app.core (new Rollup ({
 ////////////////////
 
 app.signalled ({
-	'SIGINT': app.eventQueue (httpd.stopping, app.stop)
+	'SIGINT': app.series (httpd.stopping, app.stop)
 })
 
 //////////////////////
@@ -64,10 +64,10 @@ import Bonjour from 'bonjour-hap';
 
 app.init (() => {
 	fsWatch ('htdocs', {
-		[/^[^\/]+\/loader/]: app.events (rollup.buildingAll),
-		[/^[^\/]+\/app/]: app.events (rollup.buildingAll),
-		[/\.rollup\.browser\.js/]: app.events (rollup.configuring),
-		[/.*./]: app.events (httpd.sendPageRefresh)
+		[/^[^\/]+\/loader/]: app.parallel (rollup.buildingAll),
+		[/^[^\/]+\/app/]: app.parallel (rollup.buildingAll),
+		[/\.rollup\.browser\.js/]: app.parallel (rollup.configuring),
+		[/.*./]: app.parallel (httpd.sendPageRefresh)
 	});
 	
 	Promise.all ([
@@ -76,9 +76,11 @@ app.init (() => {
 	]).then (([httpdPort, ]) => {
 		console.log ('Server listening on port ' + httpdPort);
 		// advertise an HTTP server on port 3000
+
 		const 
-			projectName =  path.basename (process.env.PWD),
+			projectName = path.basename (process.env.PWD),
 			username    = process.env.USER;
+
 		Bonjour().publish({
 			name: [projectName, username].join ('@') + '-server',
 			type: 'http',

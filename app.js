@@ -1,50 +1,66 @@
 import os from 'os';
 
+import cluster from 'cluster';
+
 import {EventEmitter} from 'events';
+
+import stackTrace from 'error-stack-parser';
+
+function callerPos () {
+	const calls = stackTrace.parse (new Error ());
+	return calls[2];
+}
 
 /**
  * @class App
- * @method use
  */
 export default class App extends EventEmitter {
 	constructor () {
 
 		super();
 
-		/** @type Object @description subscriber instances */
-		this.subscribers = {};
+		/** @type {Object} @description api instances */
+		this.apiInstances = {};
 
 	}
 
 	/**
-	 * Connect module to the app's core process
-	 * @property {Object|string} subscriber string with 
-	 * @property {string=} prefix override prefix for subscriber
+	 * Register api to be used with the app's core process
+	 * @property {Object|string} api api identifier
+	 * @property {string=|Object=} options api options
 	 * @memberof App
 	 */
-	core (subscriber, prefix) {
+	core (api, options) {
 		
-		let className;
-		if (!prefix) {
-			if (subscriber.constructor === Function) {
-				// in most cases this is a class constructor (or it should be!)
-				prefix = subscriber.prefix;
-				className = subscriber.name;
-				subscriber = new subscriber ();
-			} else {
-				// class instance
-				prefix = subscriber.constructor.prefix;
-				className = subscriber.constructor.name;
-			}
-		}
-		// console.log (subscriber, subscriber.name, subscriber.constructor === Function, sub, sub.constructor.prefix, sub instanceof Function);
-		if (!prefix) {
-			console.error (`Module ${className} should have prefix`);
+		const caller = callerPos();
+		let apiInstanceId = `${caller.functionName} @ ${caller.fileName}:${caller.lineNumber}:${caller.columnNumber}`;
+
+		/* returns empty object to avoid uninitialized errors */
+		if (cluster.isWorker) {
+			return undefined;
 		}
 
-		this.subscribers[prefix] = subscriber;
+		let className, apiInstance;
+		if (api.constructor === Function) {
+			// in most cases this is a class constructor (or it should be!)
+			// prefix = api.prefix;
+			className = api.name;
+			apiInstance = new api ();
+		} else {
+			// class instance
+			// prefix = api.constructor.prefix;
+			className = api.constructor.name;
+			apiInstance = api;
+		}
 
-		return subscriber;
+		// console.log (api, api.name, api.constructor === Function, sub, sub.constructor.prefix, sub instanceof Function);
+		// if (!apiInstanceId) {
+		//	console.error (`Module ${className} should have prefix`);
+		// }
+
+		this.apiInstances[apiInstanceId] = apiInstance;
+
+		return apiInstance;
 	}
 
 	/**
@@ -53,7 +69,7 @@ export default class App extends EventEmitter {
 	 * @param {Array<Function|Array<Function,Object>>} handlers method reference
 	 * @memberof App
 	 */
-	events (...handlers) {
+	parallel (...handlers) {
 		return (...args) => Promise.all (
 			this._wrapEvents (handlers).map (
 				evtHandler => evtHandler (args)
@@ -67,7 +83,7 @@ export default class App extends EventEmitter {
 	 * @param {...Function|Array<Function,Object>} handlers method reference
 	 * @memberof App
 	 */
-	eventQueue (...handlers) {
+	series (...handlers) {
 		return (...args) => this._wrapEvents (handlers).reduce (
 			(prev, current) => prev.then (() => current (args)),
 			Promise.resolve()
@@ -87,17 +103,17 @@ export default class App extends EventEmitter {
 		return handlers.map (handler => {
 			let
 				fn,
-				subscriber;
+				api;
 			
 			if (Array.isArray (handler)) {
-				[fn, subscriber] = handler;
+				[fn, api] = handler;
 			} else {
 				fn = handler;
 			}
 			if (!fn) {
 				console.trace (`Unexpected function passed to wrap as event`);
 			}
-			return this._event (fn, subscriber);
+			return this._event (fn, api);
 		});
 
 	}
@@ -106,10 +122,10 @@ export default class App extends EventEmitter {
 	 * Wraps received function reference as event
 	 *
 	 * @param {Function} fn method reference
-	 * @param {Object=} subscriber class instance reference
+	 * @param {Object=} api class instance reference
 	 * @memberof App
 	 */
-	_event (fn, subscriber) {
+	_event (fn, api) {
 		// console.trace (fn);
 
 		if (!fn) {
@@ -117,50 +133,50 @@ export default class App extends EventEmitter {
 			return;
 		}
 
-		let subPrefixFound;
+		let apiInstanceIdFound;
 		let methodFound;
 
-		function findMethod (subCandidate, subPrefix) {
+		function findMethod (apiCandidate, apiInstanceId) {
 			
-			allMethods (subCandidate).filter (
-				methodName => subCandidate[methodName] === fn
+			allMethods (apiCandidate).filter (
+				methodName => apiCandidate[methodName] === fn
 			).forEach (methodName => {
-				if (methodFound && subPrefixFound) {
-					console.error (`Found method ${fn.name} in both ${subPrefixFound} and ${subPrefix}. Please use 'app.wrap (method, instance)'.`);
+				if (methodFound && apiInstanceIdFound) {
+					console.error (`Found method ${fn.name} in both ${apiInstanceIdFound} and ${apiInstanceId}. Please use 'app.wrap (method, instance)'.`);
 				} else {
-					// method name is a key in subscriber. function name can be anything
+					// method name is a key in api. function name can be anything
 					methodFound    = methodName;
-					subPrefixFound = subPrefix;
+					apiInstanceIdFound = apiInstanceId;
 				}
-				// console.log ('FOUND METHOD', fn.name, subPrefix);
+				// console.log ('FOUND METHOD', fn.name, apiInstanceId);
 			});
 		}
 
-		Object.keys (this.subscribers).forEach (subPrefix => {
-			const subCandidate = this.subscribers[subPrefix];
+		Object.keys (this.apiInstances).forEach (apiInstanceId => {
+			const apiCandidate = this.apiInstances[apiInstanceId];
 
-			if (subscriber) {
-				if (subscriber !== subCandidate) {
+			if (api) {
+				if (api !== apiCandidate) {
 					return;
 				}
 			}
 
-			findMethod (subCandidate, subPrefix);
+			findMethod (apiCandidate, apiInstanceId);
 		});
 
-		if (!subPrefixFound || !methodFound) {
+		if (!apiInstanceIdFound || !methodFound) {
 			console.trace (`No instance found for method ${fn.name}. Did you used 'app.register (module)' before calling 'app.wrap (module.${fn.name})'?`);
 			return;
 		}
 	
-		return this.emitEvent.bind (this, subPrefixFound, methodFound);
+		return this.emitEvent.bind (this, apiInstanceIdFound, methodFound);
 
 	}
 
-	emitEvent (subPrefix, method, ...args) {
-		// console.log ('EMITTING', subPrefix, method, args);
-		const subscriber = this.subscribers[subPrefix];
-		return subscriber[method].apply (subscriber, args);
+	emitEvent (apiInstanceId, method, ...args) {
+		// console.log ('EMITTING', apiInstanceId, method, args);
+		const api = this.apiInstances[apiInstanceId];
+		return api[method].apply (api, args);
 	}
 
 	/**
@@ -190,10 +206,14 @@ export default class App extends EventEmitter {
 
 	/**
 	 * App init procedure. Will be called only in core process
-	 * @param {Function} codeRef initialization function
+	 * @param {Function} coreInitFn initialization function
 	 */
-	init (codeRef) {
-		codeRef ();
+	init (coreInitFn) {
+		if (cluster.isMaster) {
+			coreInitFn ();
+		} else {
+
+		}
 	}
 }
 
