@@ -1,8 +1,16 @@
 {
-  "name": "screws",
-  "version": "0.1.0",
-  "description": "Hammer that!",
+  "name": "app-scales",
+  "version": "0.3.1",
+  "description": "App will scale",
   "main": "app.js",
+  "keywords": [
+    "microservices",
+    "cluster",
+    "mesh",
+    "network",
+    "scalable",
+    "fault-tolerant"
+  ],
   "scripts": {
     "test": "jasmine --reporter=jamocha/spec --config=test/.jasmine.json"
   },
