@@ -111,7 +111,8 @@ export default class Rollup {
 					'BUNDLE ERROR FOR', 
 					config.output.file.replace (this.httpRoot, ''),
 					'=>',
-					err.code
+					err.code === 'PLUGIN_ERROR' ? `PLUGIN ${err.plugin} HOOK ${err.hook}` : err.code,
+					err.message
 				);
 				if (err.loc) {
 					console.error (
