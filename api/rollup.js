@@ -132,23 +132,22 @@ export default class Rollup {
 			}, err => {
 				console.error (
 					'BUNDLE ERROR FOR', 
-					config.output.file.replace (this.httpRoot, ''),
-					'=>',
+					'www:' + config.output.file.replace (this.httpRoot, ''),
 					err.code === 'PLUGIN_ERROR'
-						? `PLUGIN ${err.plugin} HOOK ${err.hook} MESSAGE`
-						: err.code,
-					err.message
+						? `PLUGIN ${err.plugin} HOOK ${err.hook}`
+						: err.code
 				);
 				if (err.loc) {
-					console.error (
-						err.loc.file.replace (this.httpRoot, '') + ':' + err.loc.line + ':' + err.loc.column,
-					);
 					if (err.frame) {
 						console.error (err.frame);
 					}
+					console.error (
+						'www:' + err.loc.file.replace (this.httpRoot, '') + '@' + err.loc.line + ':' + err.loc.column,
+					);
 				} else {
 					console.error (Object.assign({}, err), err.stack);
 				}
+				console.error (err.message);
 			});
 		}));
 	}
