@@ -117,7 +117,12 @@ export default class HTTPServerExpress {
 		this.express.use (express.static (this.root));
 	}
 
-	starting (port = 0) {
+	/**
+	 * 
+	 * @param {number|string=} port port to listen
+	 */
+	starting (port) {
+		port = port || this.port || 0;
 		return new Promise ((resolve, reject) => {
 			const self = this;
 			this.express.listen (parseInt (port) >= -1 ? port : this.port || 0 , function (err) {
