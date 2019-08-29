@@ -2,6 +2,10 @@ import {performance} from 'perf_hooks';
 
 import {rollup} from 'rollup';
 
+// TODO: use warning callback from class to configure skipping warnings
+// per object
+let _showDeprecated;
+
 function onwarn (warning, warn) {
 	// { loc, frame, message } = warning;
 	// if (loc) {
@@ -17,6 +21,11 @@ function onwarn (warning, warn) {
 	//	throw new Error(warning.message);
 
 	// Use default for everything else
+
+	if (!_showDeprecated && warning.code === 'DEPRECATED_FEATURE') {
+		return;
+	}
+
 	console.warn (warning.code, warning);
 }
 
@@ -32,9 +41,10 @@ export function building (inputOptions, outputOptions) {
 	const sizePlugin = {
 		name: "size",
 		generateBundle (options, bundle, isWrite) {
-			const bundleFileId = Object.keys (bundle).filter (bundledFile =>
-				!bundle[bundledFile].isAsset && bundle[bundledFile].facadeModuleId === inputOptions.input
-			)[0];
+			const bundleFileId = Object.keys (bundle).filter (bundledFile => (
+				!bundle[bundledFile].isAsset && bundle[bundledFile].facadeModuleId === inputOptions.input // new rollup
+				|| bundle[bundledFile].isEntry && options.file === outputOptions.file // old rollup
+			))[0];
 			code = bundle[bundleFileId].code;
 			// console.log(bundle.file, Buffer.byteLength(code));
 		}
@@ -71,12 +81,25 @@ export function building (inputOptions, outputOptions) {
 
 }
 
+/**
+ * @typedef RollupAPIOptions
+ * @property {string} httpRoot http server root folder
+ * @property {Object} configFiles configuration files to import
+ * @property {boolean=} showDeprecated show deprecated warnings (global as of now)
+ */
+"";
+
 export default class Rollup {
 
-	constructor ({httpRoot, configFiles}) {
+	/**
+	 * 
+	 * @param {RollupAPIOptions} options rollup API options
+	 */
+	constructor ({httpRoot, configFiles, showDeprecated}) {
 		this.httpRoot = httpRoot;
 		this.configFiles = configFiles;
 		this.configs = [];
+		_showDeprecated = showDeprecated;
 	}
 
 	static get prefix () {
@@ -111,7 +134,9 @@ export default class Rollup {
 					'BUNDLE ERROR FOR', 
 					config.output.file.replace (this.httpRoot, ''),
 					'=>',
-					err.code === 'PLUGIN_ERROR' ? `PLUGIN ${err.plugin} HOOK ${err.hook}` : err.code,
+					err.code === 'PLUGIN_ERROR'
+						? `PLUGIN ${err.plugin} HOOK ${err.hook} MESSAGE`
+						: err.code,
 					err.message
 				);
 				if (err.loc) {
@@ -137,7 +162,7 @@ export default class Rollup {
 			// console.log (Object.keys (require.cache));
 			// https://github.com/standard-things/esm/issues/287
 			this.configs = [].concat.apply([], modules.map (mod => mod.default));
-			this.buildingAll();
+			return this.buildingAll();
 		}).catch (err => {
 			console.error (err);
 		});
