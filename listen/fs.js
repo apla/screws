@@ -1,7 +1,4 @@
 import fs from 'fs';
-import path from 'path';
-
-import {EventEmitter} from 'events';
 
 /**
  * @typedef WatchRules
@@ -32,7 +29,7 @@ export default function watch (folders, callbacks) {
 		const eventKey = folder + callback;
 		const eventFiles = files[eventKey].filter((v, i, a) => a.indexOf(v) === i);
 		// console.log (`${callback.name} for '${eventFiles.join ("', '")}' in '${path.relative (process.cwd(), folder)}'`, );
-		callback (folder, eventFiles);
+		callback ({folder, files: eventFiles});
 		timeouts[eventKey] = undefined;
 		files[eventKey] = [];
 	}
@@ -54,6 +51,7 @@ export default function watch (folders, callbacks) {
 
 			files[eventKey] = files[eventKey] || [];
 			files[eventKey].push (filename);
+			// files[eventKey].push ([filename, fsEvent]);
 
 			// console.log (callback.name, fsEvent, filename, eventKey, timeouts[callback] ? 'debounced' : 'new');
 

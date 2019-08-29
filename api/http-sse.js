@@ -1,4 +1,4 @@
-import fs   from 'fs';
+import fs from 'fs';
 import path from 'path';
 
 import SSEPusher from 'sse-pusher';
@@ -316,7 +316,7 @@ registerWorker ();
 			res.send (`${unwrapFnContents (serviceWorker)}`);
 		})
 
-		this.reload = function reload (folder, files) {
+		this.reload = function reload ({folder, files}) {
 			// TODO: use httpRoot somehow
 			// pusher ('reload', + Date.now());
 			pusher ('reload', JSON.stringify (files.map (file => '/' + file)));

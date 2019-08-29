@@ -33,13 +33,22 @@ class EvtHandler extends EventEmitter {
 	nothing () {
 	}
 
+	something (value, ok) {
+		if (!value)
+			throw "No value";
+		if (value !== 'immediate')
+			throw "Incorrect value";
+		assert.equal (ok, 'ok');
+		this.emit ('done', value);
+	}
+
 	fail () {
 		throw new Error ("Test error");
 	}
 }
 
 function immediate (handler) {
-	setImmediate (() => handler ());
+	setImmediate (() => handler ("immediate", "ok"));
 }
 
 describe ("app interface", () => {
@@ -125,6 +134,19 @@ describe ("app interface", () => {
 			assert.equal (data.join (''), '-+-+')
 			done ();
 		});
+	});
+
+	it ("should pass value from initiator to api", (done) => {
+
+		const app = new App ();
+
+		const test = new EvtHandler ();
+
+		app.core (test);
+
+		immediate (app.parallel (test.something));
+
+		test.on ('done', done);
 	});
 
 

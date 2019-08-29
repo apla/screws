@@ -11,7 +11,7 @@ describe ("fs watcher", () => {
 		const watchFolder = 'test';
 		const touchFile = '.jasmine.json';
 
-		fsWatch (watchFolder, (folder, files) => {
+		fsWatch (watchFolder, ({folder, files}) => {
 			assert.equal (folder, watchFolder);
 			assert.equal (files[0], touchFile);
 			done ();
@@ -27,7 +27,7 @@ describe ("fs watcher", () => {
 		const watchFolders = ['test', 'node_modules'];
 		const touchFile = '.jasmine.json';
 
-		fsWatch (watchFolders, (folder, files) => {
+		fsWatch (watchFolders, ({folder, files}) => {
 			assert.equal (folder, watchFolders[0]);
 			assert.equal (files[0], touchFile);
 			done ();
@@ -47,7 +47,7 @@ describe ("fs watcher", () => {
 			[/.*\.conf/]: () => {
 				assert (false);
 			},
-			[/\.jasmine\.json/]: (folder, files) => {
+			[/\.jasmine\.json/]: ({folder, files}) => {
 				assert.equal (folder, watchFolder);
 				assert.equal (files[0], touchFile);
 				done ();

@@ -1,6 +1,6 @@
 {
   "name": "app-scales",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "description": "App will scale",
   "main": "app.js",
   "keywords": [
