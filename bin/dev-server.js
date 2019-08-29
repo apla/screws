@@ -46,7 +46,7 @@ const rollup = app.core (new Rollup ({
 ////////////////////
 
 app.signalled ({
-	'SIGINT': app.series (httpd.stopping, app.stop)
+	'SIGINT': app.series (httpd.stopping, app.stopping)
 })
 
 //////////////////////

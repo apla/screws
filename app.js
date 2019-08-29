@@ -173,10 +173,10 @@ export default class App extends EventEmitter {
 
 	}
 
-	emitEvent (apiInstanceId, method, ...args) {
+	emitEvent (apiInstanceId, method, args) {
 		// console.log ('EMITTING', apiInstanceId, method, args);
 		const api = this.apiInstances[apiInstanceId];
-		return api[method].apply (api, args);
+		return api[method].call (api, ...args);
 	}
 
 	/**
@@ -200,7 +200,7 @@ export default class App extends EventEmitter {
 	/**
 	 * Stops core process
 	 */
-	stop () {
+	stopping () {
 		process.exit();
 	}
 
@@ -210,6 +210,7 @@ export default class App extends EventEmitter {
 	 */
 	init (coreInitFn) {
 		if (cluster.isMaster) {
+			this.core (this);
 			coreInitFn ();
 		} else {
 
