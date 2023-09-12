@@ -29,7 +29,7 @@ function onwarn (warning, warn) {
 	console.warn (warning.code, warning);
 }
 
-const CACHE = {};
+var rollupCache = {};
 
 export function building (inputOptions, outputOptions) {
 
@@ -53,9 +53,10 @@ export function building (inputOptions, outputOptions) {
 	// create a bundle
 	return rollup (Object.assign ({
 		onwarn,
-		cache: CACHE[inputOptions.input]
+		cache: rollupCache.$
 	}, inputOptions, {
-		plugins: [...inputOptions.plugins, sizePlugin]
+		plugins: [...inputOptions.plugins, sizePlugin],
+		perf: true,
 	})).then (bundle => {
 
 		// console.log (Object.keys(bundle));
@@ -69,12 +70,25 @@ export function building (inputOptions, outputOptions) {
 
 		// use cache for buble plugin https://github.com/rollup/rollup/pull/2382
 		// not works: https://github.com/rollup/rollup/pull/2386
-		CACHE[inputOptions.input] = bundle;
 
+		const timings = bundle.getTimings ? bundle.getTimings() : {};
+
+		rollupCache.$ = bundle.cache;
+
+		/*
+		if (rollupCache[inputOptions.input] && code === rollupCache[inputOptions.input].code) {
+			console.log (`<<<<<<<<<<<<< USING CACHED >>>>>>>>>>>>>>>>>`)
+			return Promise.resolve ({bundle, code, timings, changed: false});
+		}
+
+		rollupCache[inputOptions.input] = {
+			code
+		};
+		*/
 
 		// writing bundle to disk using path in outputOptions
 		return bundle.write (outputOptions).then (
-			() => ({bundle, code})
+			() => ({bundle, code, timings, changed: true})
 		);
 
 	});
@@ -121,13 +135,24 @@ export default class Rollup {
 					console.log (result.bundle.getTimings());
 				*/
 	
-				console.log (
-					'BUNDLED',
-					config.output.file.replace (this.httpRoot, ''),
-					'=>',
-					Buffer.byteLength(result.code),
-					'(' + Math.trunc (rollEndTime - rollStartTime) + 'ms)'
-				);
+				if (result.changed) {
+					console.log (
+						'BUNDLED',
+						config.output.file.replace (this.httpRoot, ''),
+						'=>',
+						Buffer.byteLength(result.code),
+						'(' + Math.trunc (rollEndTime - rollStartTime) + 'ms)'
+					);
+				} else {
+					console.log (
+						'NO CHANGES',
+						config.output.file.replace (this.httpRoot, ''),
+						//'=>',
+						//Buffer.byteLength(result.code),
+						'(' + Math.trunc (rollEndTime - rollStartTime) + 'ms)'
+					);
+				}
+				
 	
 			}, err => {
 				console.error (

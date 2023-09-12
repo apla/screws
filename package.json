@@ -1,6 +1,6 @@
 {
   "name": "app-scales",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "App will scale",
   "main": "app.js",
   "keywords": [
@@ -11,18 +11,20 @@
     "scalable",
     "fault-tolerant"
   ],
+  "type": "module",
   "scripts": {
-    "test": "jasmine --reporter=jamocha/spec --config=test/.jasmine.json"
+    "test": "jasmine --config=test/.jasmine.json"
   },
   "author": "Ivan Baktsheev <dot.and.thing@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "esm": "^3.2.25",
     "express": "^4.17.1",
-    "jasmine": "^3.4.0",
-    "mongodb": "^3.3.0-beta2",
-    "pg": "^7.12.0",
-    "redis": "^2.8.0"
+    "jasmine": "^4.1.0",
+    "mongodb": "^4.6.0",
+    "pg": "^8.11.3",
+    "redis": "^2.8.0",
+    "rollup": "^2.26.11",
+    "sse-pusher": "^1.1.1"
   },
   "dependencies": {
     "error-stack-parser": "^2.0.3"

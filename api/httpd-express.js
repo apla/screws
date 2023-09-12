@@ -23,7 +23,7 @@ const proxy = new Proxy (locationHeader => {
 function getUpstreamUrl (proto, req) {
 	return proto
 	+ '://' + req.params[1]
-	+ '?' + url.parse (req.url).query
+	+ new URL('http://example' + req.url).search;
 }
 
 function proxyHandler (req, res) {
@@ -46,11 +46,11 @@ function proxyHandler (req, res) {
  * @property {Object<string,string[]>=} mimeMaps  additional mime maps (content-type: [list of extensions])
  * @property {boolean=}                 proxy     use forward proxy on scheme: //server/http(d)/proxied.site
  * @property {string|boolean=}          eventsUrl use SSE, /events by default
- * @property {number=}                  port      port to listen
+ * @property {string|number}            [port]    port to listen
  */
 
 /** 
- * @typedef {import('./subscriber.js')} Subscriber
+ * @typedef {import('./api.js').AppAPI} AppAPI
  */
 /** 
  * @typedef {import('http').Server} HTTPServer
@@ -60,17 +60,18 @@ function proxyHandler (req, res) {
 
 /**
  * @classdesc HTTP server based on express
- * @implements Subscriber
+ * @implements {AppAPI}
  */
 export default class HTTPServerExpress {
 	/**
 	 * Express server constructor
-	 * @param {HTTPServerOptions=} options 
+	 * @param {HTTPServerOptions} [options={}]
 	 */
 	constructor (options = {}) {
 		this.express = express ();
-		/** @type HTTPServer */
+		/** @type {HTTPServer|undefined} */
 		this.server  = undefined;
+		this.handlers = {};
 
 		if (options.root) {
 			this.enableStatic (options.root, options.mimeMaps);
@@ -78,6 +79,8 @@ export default class HTTPServerExpress {
 		
 		if (options.port) {
 			this.port = options.port;
+		} else {
+			this._port = 0;
 		}
 
 		if (options.proxy) {
@@ -118,20 +121,65 @@ export default class HTTPServerExpress {
 	}
 
 	/**
-	 * 
-	 * @param {number|string=} port port to listen
+	 * @param {number|string} portNum port number
 	 */
-	starting (port) {
-		port = port || this.port || 0;
+	set port (portNum) {
+		const portInt = parseInt (portNum.toString(), 10);
+		if (portInt < 0 || portInt > 65535) {
+			throw "port number should be integer with 0 < value < 65535";
+		}
+		this._port = portInt;
+	}
+
+	/**
+	 * @returns {number} port number
+	 */
+	get port () {
+		return this._port;
+	}
+
+	/**
+	 * Asking API to start
+	 * @returns {Promise<number>} port at which API started
+	 */
+	starting () {
 		return new Promise ((resolve, reject) => {
-			const self = this;
-			this.express.listen (parseInt (port) >= -1 ? port : this.port || 0 , function (err) {
+			const httpd = this;
+			this.express.listen (this.port , function (err) {
 				if (err)
 					return reject (err);
-				self.server = this;
+				httpd.server = this;
+				if (httpd.handlers.didStart) {
+					const handler = httpd.handlers.didStart;
+					let handlerResult;
+					try {
+						handlerResult = handler (httpd);
+					} catch (err) {
+						console.error (err);
+						reject (err);
+						return;
+					}
+
+					Promise.resolve (handlerResult).then (result => {
+						if (result && result instanceof Error) {
+							reject (result);
+							return;
+						}
+
+						resolve (this.address().port);
+					});
+
+					return;
+
+				}
 				resolve (this.address().port);
 			});
 		})
+	}
+
+	didStart (handler) {
+		// TODO: I really don't want to support multiple handlers
+		this.handlers.didStart = handler;
 	}
 
 	stopping () {

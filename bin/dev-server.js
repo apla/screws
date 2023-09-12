@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+// try to simulate budo
+
 import path  from 'path';
 
 import App from '../app.js';
-// import App from 'screws/app.js';
+// import App from 'app-scales/app.js';
 
 const app = new App ();
 
@@ -14,9 +16,10 @@ const httpPort = 50102;
 // httpd section  //
 ////////////////////
 
-import ExpressServer from '../http-server-express.js';
-// import ExpressServer from 'screws/http-server-express.js';
+import ExpressServer from '../api/httpd-express.js';
+// import ExpressServer from 'app-scales/api/httpd-express.js';
 
+/** @type {ExpressServer} */
 const httpd = app.core (new ExpressServer ({
 	root: httpRoot,
 	proxy: true,
@@ -30,9 +33,13 @@ const httpd = app.core (new ExpressServer ({
 
 // import rollupConfigs from './rollup.browser.js';
 
-import Rollup from '../rollup.js';
-// import Rollup from 'screws/rollup.js';
+// if you don't need rollup, uncomment one below and comment out rollup init
+// const rollup = false;
 
+import Rollup from '../api/rollup.js';
+// import Rollup from 'app-scales/api/rollup.js';
+
+/** @type {Rollup} */
 const rollup = app.core (new Rollup ({
 	httpRoot: httpRoot,
 	configFiles: [
@@ -40,6 +47,32 @@ const rollup = app.core (new Rollup ({
 		path.join (process.env.INIT_CWD, '.rollup.browser.js')
 	]
 }));
+
+const rollup2 = app.core2 (new Rollup ({
+	httpRoot: httpRoot,
+	configFiles: [
+		'./rollup.browser.js',
+		path.join (process.env.INIT_CWD, '.rollup.browser.js')
+	]
+}));
+
+
+////////////////////////
+// discovery section  //
+////////////////////////
+
+import Bonjour from 'bonjour-hap';
+const bonjour = Bonjour ();
+
+const 
+	projectName = path.basename (process.env.PWD),
+	username    = process.env.USER;
+
+const announcement = bonjour.publish({
+	name: [projectName, username].join ('@') + '-server',
+	type: 'http',
+	port: httpPort
+});
 
 ////////////////////
 // signal section //
@@ -54,38 +87,27 @@ app.signalled ({
 //////////////////////
 
 import fsWatch from '../listen/fs.js';
-// import fsWatch from 'screws/listen/fs.js';
-
-////////////////////////
-// discovery section  //
-////////////////////////
-
-import Bonjour from 'bonjour-hap';
+// import fsWatch from 'app-scales/listen/fs.js';
 
 app.init (() => {
-	fsWatch ('htdocs', {
-		[/^[^\/]+\/loader/]: app.parallel (rollup.buildingAll),
-		[/^[^\/]+\/app/]: app.parallel (rollup.buildingAll),
-		[/\.rollup\.browser\.js/]: app.parallel (rollup.configuring),
-		[/.*./]: app.parallel (httpd.sendPageRefresh)
-	});
+	
+	const watchReload = {[/.*./]: app.parallel (httpd.sendPageRefresh)}
+
+	fsWatch ('htdocs', Object.assign ({}, watchReload, rollup ? {
+		[/^[^\/]+\/loader/]:       app.parallel (rollup.buildingAll),
+		[/^[^\/]+\/app/]:          app.parallel (rollup.buildingAll),
+		[/\.rollup\.browser\.js/]: app.parallel (rollup.configuring)
+	} : {}));
 	
 	Promise.all ([
 		httpd.starting (),
-		rollup.starting()
+		rollup ? rollup.starting() : Promise.resolve (),
+		announcement ? announcement.starting() : Promise.resolve (),
 	]).then (([httpdPort, ]) => {
 		console.log ('Server listening on port ' + httpdPort);
 		// advertise an HTTP server on port 3000
 
-		const 
-			projectName = path.basename (process.env.PWD),
-			username    = process.env.USER;
-
-		Bonjour().publish({
-			name: [projectName, username].join ('@') + '-server',
-			type: 'http',
-			port: httpdPort
-		});
+		
 	});
 })
 

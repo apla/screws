@@ -3,9 +3,120 @@ import path from 'path';
 
 import SSEPusher from 'sse-pusher';
 
-const packageJson = require (path.join (process.cwd (), 'package.json'));
+// const packageJson = require (path.join (process.cwd (), 'package.json'));
 
+var eventId = 0;
+var nextClientId = 0;
+var clients = {};
 let sseConnections = [];
+
+export default class EventSender {
+	constructor ({url, root}, httpApp) {
+
+		const pusher = this.pusher = SSEPusher();
+	
+		httpApp.use ('/events', pusher.handler ());
+	
+		httpApp.get (url + '.js', function (req, res) {
+			res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
+			res.send (`
+${sseHandler}
+
+sseHandler ('${url}');
+
+/*
+${registerWorker}
+
+registerWorker ();
+*/
+`);
+		});
+	
+		httpApp.get ('/sw.js', function (req, res) {
+			res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
+			res.setHeader ("content-type", "application/javascript");
+			res.send (`${unwrapFnContents (serviceWorker)}`);
+		})
+
+		this.reload = function reload ({folder, files}) {
+			// TODO: use httpRoot somehow
+			// pusher ('reload', + Date.now());
+			pusher ('reload', JSON.stringify (files.map (file => '/' + file)));
+		}
+	
+		this.alert = function alert (message) {
+			// TODO: use httpRoot somehow
+			// pusher ('reload', + Date.now());
+			pusher ('alert', message);
+		}
+
+		this.event = function event (eventName, message) {
+			if (message === undefined) {
+				message = eventName;
+				pusher (message);
+			} else {
+				pusher (eventName, message);
+			}
+			
+		}
+	}
+
+	handler () {
+		
+	}
+
+	
+}
+
+export function eventSender ({url, root}, httpApp) {
+
+	const pusher = SSEPusher();
+
+	httpApp.use ('/events', pusher.handler ());
+
+	httpApp.get (url + '.js', function (req, res) {
+		res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
+		res.send (`
+${sseHandler}
+
+sseHandler ('${url}');
+
+/*
+${registerWorker}
+
+registerWorker ();
+*/
+`);
+	});
+
+	httpApp.get ('/sw.js', function (req, res) {
+		res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
+		res.setHeader ("content-type", "application/javascript");
+		res.send (`${unwrapFnContents (serviceWorker)}`);
+	})
+
+	return {
+		reload: function reload (folder, files) {
+			// TODO: use httpRoot somehow
+			// pusher ('reload', + Date.now());
+			pusher ('reload', JSON.stringify (files.map (file => '/' + file)));
+		},
+		alert: function alert (message) {
+			// TODO: use httpRoot somehow
+			// pusher ('reload', + Date.now());
+			pusher ('alert', message);
+		},
+		event: function event (eventName, message) {
+			// TODO: use httpRoot somehow
+			// pusher ('reload', + Date.now());
+			pusher (eventName, message);
+		},
+		close: function close() {
+
+		}
+	}
+
+}
 
 function refreshNoReload () {
 	// scripts should be handled using hot reload
@@ -287,105 +398,3 @@ function unwrapFnContents (fn) {
 		.replace (/function[^\(]*\(\) \{/m, '')
 		.replace (/}$/, '');
 }
-
-export default class EventSender {
-	constructor ({url, root}, httpApp) {
-
-		const pusher = this.pusher = SSEPusher();
-	
-		httpApp.use ('/events', pusher.handler ());
-	
-		httpApp.get (url + '.js', function (req, res) {
-			res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
-			res.send (`
-${sseHandler}
-
-sseHandler ('${url}');
-
-/*
-${registerWorker}
-
-registerWorker ();
-*/
-`);
-		});
-	
-		httpApp.get ('/sw.js', function (req, res) {
-			res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
-			res.setHeader ("content-type", "application/javascript");
-			res.send (`${unwrapFnContents (serviceWorker)}`);
-		})
-
-		this.reload = function reload ({folder, files}) {
-			// TODO: use httpRoot somehow
-			// pusher ('reload', + Date.now());
-			pusher ('reload', JSON.stringify (files.map (file => '/' + file)));
-		}
-	
-		this.alert = function alert (message) {
-			// TODO: use httpRoot somehow
-			// pusher ('reload', + Date.now());
-			pusher ('alert', message);
-		}
-
-		this.event = function event (eventName, message) {
-			if (message === undefined) {
-				message = eventName;
-				pusher (message);
-			} else {
-				pusher (eventName, message);
-			}
-			
-		}
-	}
-
-	
-}
-
-export function eventSender ({url, root}, httpApp) {
-
-	const pusher = SSEPusher();
-
-	httpApp.use ('/events', pusher.handler ());
-
-	httpApp.get (url + '.js', function (req, res) {
-		res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
-		res.send (`
-${sseHandler}
-
-sseHandler ('${url}');
-
-/*
-${registerWorker}
-
-registerWorker ();
-*/
-`);
-	});
-
-	httpApp.get ('/sw.js', function (req, res) {
-		res.setHeader ("cache-control", "no-store, private"); // "max-age=0";
-		res.setHeader ("content-type", "application/javascript");
-		res.send (`${unwrapFnContents (serviceWorker)}`);
-	})
-
-	return {
-		reload: function reload (folder, files) {
-			// TODO: use httpRoot somehow
-			// pusher ('reload', + Date.now());
-			pusher ('reload', JSON.stringify (files.map (file => '/' + file)));
-		},
-		alert: function alert (message) {
-			// TODO: use httpRoot somehow
-			// pusher ('reload', + Date.now());
-			pusher ('alert', message);
-		},
-		event: function event (eventName, message) {
-			// TODO: use httpRoot somehow
-			// pusher ('reload', + Date.now());
-			pusher (eventName, message);
-		},
-	}
-
-}
-

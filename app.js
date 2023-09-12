@@ -24,13 +24,32 @@ export default class App extends EventEmitter {
 
 	}
 
+	core2 (api, options = {}) {
+		
+		const caller = callerPos();
+		let apiInstanceId = `${caller.functionName} @ ${caller.fileName}:${caller.lineNumber}:${caller.columnNumber}`;
+
+		const app = this;
+
+		const proxifiedApi = new Proxy(api, {
+			get(target, prop, receiver) {
+				if (cluster.isWorker) {
+					// return wrapped function
+					// app.publish(apiInstanceId, )
+				}
+			}
+		});
+
+		return proxifiedApi;
+	}
+
 	/**
 	 * Register api to be used with the app's core process
 	 * @property {Object|string} api api identifier
-	 * @property {string=|Object=} options api options
+	 * @property {string|Object} [options={}] api options
 	 * @memberof App
 	 */
-	core (api, options) {
+	core (api, options = {}) {
 		
 		const caller = callerPos();
 		let apiInstanceId = `${caller.functionName} @ ${caller.fileName}:${caller.lineNumber}:${caller.columnNumber}`;
@@ -61,6 +80,66 @@ export default class App extends EventEmitter {
 		this.apiInstances[apiInstanceId] = apiInstance;
 
 		return apiInstance;
+	}
+
+	/**
+	 * Register api to be launched in the cluster subprocess(es)
+	 * @property {Object|string} api api identifier
+	 * @property {string=|Object=} options api options
+	 * @memberof App
+	 */
+	cluster (api, options) {
+
+		const caller = callerPos();
+		let apiInstanceId = `${caller.functionName} @ ${caller.fileName}:${caller.lineNumber}:${caller.columnNumber}`;
+
+		let className, apiInstance;
+		if (!cluster.isWorker) {
+			apiInstance = undefined;
+		}
+
+		
+		if (api.constructor === Function) {
+			// in most cases this is a class constructor (or it should be!)
+			// prefix = api.prefix;
+			className = api.name;
+			apiInstance = new api ();
+		} else {
+			// class instance
+			// prefix = api.constructor.prefix;
+			className = api.constructor.name;
+			apiInstance = api;
+		}
+
+		// console.log (api, api.name, api.constructor === Function, sub, sub.constructor.prefix, sub instanceof Function);
+		// if (!apiInstanceId) {
+		//	console.error (`Module ${className} should have prefix`);
+		// }
+
+		this.apiInstances[apiInstanceId] = apiInstance;
+
+		return apiInstance;
+
+	}
+
+	/**
+	 * Register api as compute and launch it as worker threads
+	 * @property {Object|string} api api identifier
+	 * @property {string=|Object=} options api options
+	 * @memberof App
+	 */
+	compute () {
+
+	}
+
+	/**
+	 * Cloud api on remote hosts
+	 * @property {Object|string} api api identifier
+	 * @property {string=|Object=} options api options
+	 * @memberof App
+	 */
+	cloud () {
+
 	}
 
 	/**
@@ -176,6 +255,13 @@ export default class App extends EventEmitter {
 	emitEvent (apiInstanceId, method, args) {
 		// console.log ('EMITTING', apiInstanceId, method, args);
 		const api = this.apiInstances[apiInstanceId];
+		if (api.instanceType === 'cluster') {
+			return this.callWorkers ();
+		} else if (api.instanceType === 'compute') {
+			return this.callNextFreeThread ();
+		} else if (api.instanceType === 'cloud') {
+			return this.callCloudAPI ();
+		}
 		return api[method].call (api, ...args);
 	}
 
@@ -204,16 +290,59 @@ export default class App extends EventEmitter {
 		process.exit();
 	}
 
+	workerMessageHandler (message, handle) {
+		if (!message) return;
+		// TODO: check if worker already configured and core process sane
+		if (message.response && message.response === 'workerConfig') {
+			const apiInstanceId = message.payload.apiInstanceId;
+			this.apiInstances[apiInstanceId].starting.then (() => {
+				cluster.worker.send ({status: 'ready'});
+			}, (err) => {
+				cluster.worker.send ({
+					status: 'failure',
+					stage: 'starting',
+					apiInstanceId
+				});
+			});
+			return;
+		}
+
+		if (message.method) {
+			const apiInstanceId = message.api;
+			const api = this.apiInstances[apiInstanceId];
+			Promise.all (api[message.method].bind (api)).then (() => {
+				cluster.worker.send ({
+					status: 'ready',
+					refId: message.refId
+				});
+			}, err => {
+				cluster.worker.send ({
+					status: 'failure',
+					stage: 'api call',
+					apiInstanceId
+				});
+			});
+			return;
+		}
+	}
+
 	/**
 	 * App init procedure. Will be called only in core process
 	 * @param {Function} coreInitFn initialization function
 	 */
 	init (coreInitFn) {
-		if (cluster.isMaster) {
+		if (cluster.isPrimary) {
 			this.core (this);
 			coreInitFn ();
 		} else {
+			cluster.worker.on ('online', () => {
+				cluster.worker.send ({request: 'workerConfig'});
+			});
 
+			cluster.worker.on (
+				'message',
+				this.workerMessageHandler.bind (this)
+			);
 		}
 	}
 }
